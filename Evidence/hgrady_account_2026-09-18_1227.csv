@@ -1,0 +1,2 @@
+﻿"Name","SamAccountName","Department","Title","LastLogonDate","Enabled","DistinguishedName"
+"Harold Grady","hgrady","IT","Systems Analyst","9/14/2023 11:42:15 AM","True","CN=Harold Grady,OU=IT,DC=NMG,DC=com"
