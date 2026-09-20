@@ -3,7 +3,7 @@
     Documents and disables a single Active Directory account.
 
 .DESCRIPTION
-    Steps 1 and 2 of SOP-IAM-001. Captures the account and its group
+   This script performs 1, 2 and 4 of SOP-IAM-001. Captures the account and its group
     memberships to timestamped CSV files, then disables the account and
     stamps it with the authorising ticket number.
 
@@ -21,9 +21,9 @@
     Runs every check and reports what it would do, changing nothing.
 
 .NOTES
-    Author  : YOUR NAME HERE
-    Created : TODAY'S DATE HERE
-    Implements steps 1 and 2 of SOP-IAM-001.
+    Author  : Zevan Simon
+    Created : 9-20-26
+    Implements steps 1, 2 and 4 of SOP-IAM-001.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -122,6 +122,32 @@ $groups |
 
 Write-Host "  Captured $($groups.Count) memberships" -ForegroundColor Green
 
+
+if (-not $WhatIfPreference) {
+
+    $groupFile = "$ReportPath\$($Username)_groups_$stamp.csv"
+
+    if (-not (Test-Path $groupFile)) {
+        Write-Host "  STOP: no export file was written." -ForegroundColor Red
+        try { Stop-Transcript | Out-Null } catch { }
+        return
+    }
+
+    $written = @(Import-Csv $groupFile)
+
+    if ($written.Count -eq 0) {
+        Write-Host "  STOP: export file is empty." -ForegroundColor Red
+        Write-Host "        Refusing to remove unrecorded access." -ForegroundColor Gray
+        try { Stop-Transcript | Out-Null } catch { }
+        return
+    }
+
+    Write-Host "  Verified $($written.Count) memberships on disk" -ForegroundColor Green
+}
+
+
+
+
 #--- STEP 2: DISABLE ----------------------------------------
 # ShouldProcess is what makes -WhatIf work. Everything inside
 # this block is skipped on a WhatIf run, and you write nothing
@@ -137,6 +163,47 @@ if ($PSCmdlet.ShouldProcess($Username, "Disable account and stamp $Ticket")) {
     Write-Host "  Disabled and stamped." -ForegroundColor Green
 }
 
+#--- EDIT 3: THE ACTUAL FIX ---------------------------------
+# Your script already has a ShouldProcess block. It protects
+# the disabled. Leave that one exactly as it is.
+#
+# This is a SECOND one, and it goes directly after the
+# disable block's closing brace.
+#
+# Delete the loop you pasted at the bottom in Phase 1, then
+# paste this in its place.
+
+if ($PSCmdlet.ShouldProcess($Username, "Remove $($written.Count) memberships")) {
+
+       $removed = @()
+        $failed  = @()
+
+        foreach ($g in $groups) {
+
+        if ($g.Name -eq "Domain Users") { continue }
+
+            try {
+                Remove-ADGroupMember -Identity $g -Members $Username `
+                    -Confirm:$false -ErrorAction Stop
+                $removed += $g.Name
+                Write-Host "  Removed: $($g.Name)" -ForegroundColor Yellow
+            }
+            catch {
+                $failed += "$($g.Name)  ($($_.Exception.Message))"
+            }
+    }
+
+    Write-Host ""
+    Write-Host "  Removed : $($removed.Count)" -ForegroundColor Green
+
+    if ($failed.Count -gt 0) {
+        Write-Host "  FAILED  : $($failed.Count)" -ForegroundColor Red
+        $failed | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+    } 
+
+}
+
+
 
 #--- SUMMARY ------------------------------------------------
 
@@ -147,5 +214,6 @@ Write-Host "  Evidence : $ReportPath"
 Write-Host "  Log      : $LogPath"
 Write-Host ""
 
-Stop-Transcript | Out-Null
+try { Stop-Transcript | Out-Null } catch { }
+
 
