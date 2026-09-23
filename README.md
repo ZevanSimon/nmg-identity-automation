@@ -9,9 +9,9 @@ she retired, the emails stopped, and nobody noticed for 102 days. A manual sweep
 It took 11 hours over 4 days. But it only found what it knew to look for. 
 
 It missed:
-• Departures that were never recorded
-• Contractors who never touched payroll
-• Service accounts that were never people 
+â€¢ Departures that were never recorded
+â€¢ Contractors who never touched payroll
+â€¢ Service accounts that were never people 
 
 Zero automation. Zero alerts. One point of failure holding up the entire offboarding process, 
 and no idea how muchit had already missed. 
@@ -27,6 +27,20 @@ No paperwork. No name mathching. No trusting that HR and IT are in sync.
 
 If an account hasn't logged in, the domain controller knows, regardless of what
 any spreadsheet says. 
+
+## Before you start
+
+- Windows Server with the ActiveDirectory PowerShell module
+
+      Import-Module ActiveDirectory
+
+- Rights to modify user objects in the domain
+- An authorising ticket number, in the form NMG-0000
+- A Disabled Users OU at the root of the domain
+- A writable reports folder. Create it if it does not exist:
+
+      New-Item -Path "C:\Reports\Offboarding" -ItemType Directory -Force
+
 
 ## Tools
 
